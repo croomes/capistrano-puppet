@@ -1,9 +1,9 @@
 # -*- encoding: utf-8 -*-
-require File.expand_path("../lib/puppet/capistrano/version", __FILE__)
+require File.expand_path("../lib/capistrano/puppet/version", __FILE__)
 
 Gem::Specification.new do |gem|
   gem.name        = "capistrano-puppet"
-  gem.version     = Puppet::Capistrano::VERSION.dup
+  gem.version     = Capistrano::Puppet::VERSION.dup
   gem.platform    = Gem::Platform::RUBY
   gem.author      = "Simon Croome"
   gem.email       = "simon@croome.org"
