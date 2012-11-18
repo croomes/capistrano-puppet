@@ -1,5 +1,5 @@
 module Capistrano
-  class Puppet
-    VERSION="0.2.0"
+  module Puppet
+    VERSION="0.2.0".freeze
   end
 end
