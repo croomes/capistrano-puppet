@@ -50,7 +50,7 @@ module Capistrano
             # These variables MUST be set in the client capfiles. If they are not set,
             # the deploy will fail with an error.
             # =========================================================================
-            _cset(:puppet_service)    { default_service }
+            _cset(:puppet_service)    { Capistrano::Puppet::Service.default_service }
 
             # =========================================================================
             # These variables may be set in the client capfile if their default values
@@ -62,7 +62,7 @@ module Capistrano
             # what you are doing. Make sure you understand all the implications of your
             # changes if you do decide to muck with these!
             # =========================================================================
-            _cset(:service)           { Capistrano::Puppet::Service.new(puppet_service, self) }
+            _cset(:service)           { Capistrano::Puppet::Service.new(self) }
 
             # puts variables.to_yaml
           end

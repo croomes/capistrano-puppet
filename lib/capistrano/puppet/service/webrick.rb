@@ -60,28 +60,18 @@ module Capistrano
           run "#{try_sudo} /sbin/service puppet force-reload"
         end
 
-        # Restarts the service, only if it's already running.
-        def condrestart
-          run "#{try_sudo} /sbin/service puppet condrestart"
-        end
-
-        # Single run.
-        def once
-          run "#{try_sudo}/sbin/service puppet once"
-        end
-
         def self.load_into(capistrano_config)
           capistrano_config.load do
             namespace :puppet do
 
               desc 'Restarts if already running'
               task :condrestart, :roles => :master, :except => {:no_release => true} do
-                service.start
+                run "#{try_sudo}/sbin/service puppet condrestart"
               end
               
               desc 'Exits after running the configuration once'
               task :once, :roles => :master, :except => {:no_release => true} do
-                service.start
+                run "#{try_sudo}/sbin/service puppet once"
               end
             end
           end
