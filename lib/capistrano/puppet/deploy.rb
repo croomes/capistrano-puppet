@@ -2,7 +2,6 @@ require 'benchmark'
 require 'capistrano/recipes/deploy/scm'
 require 'capistrano/recipes/deploy/strategy'
 require 'capistrano/puppet/service'
-# require 'capistrano/puppet/service/base'
 
 module Capistrano
   module Puppet
@@ -23,7 +22,6 @@ module Capistrano
         'deploy:cold',
         'deploy:pending:default',
         'deploy:pending:diff',
-        'deploy:restart' # TODO: remove after testing
       ]
       def self.load_into(capistrano_config)
         capistrano_config.load do
@@ -93,13 +91,6 @@ module Capistrano
             # standalone case, or during deployment.
             _cset(:latest_release)    { exists?(:deploy_timestamped) ? release_path : current_release }
 
-
-
-            # _cset(:app_env)        { (fetch(:rails_env) rescue 'production') }
-            # _cset(:unicorn_pid)    { "#{fetch(:current_path)}/tmp/pids/unicorn.pid" }
-            # _cset(:unicorn_env)    { fetch(:app_env) }
-            # _cset(:unicorn_bin)    { "unicorn" }
-            # _cset(:unicorn_bundle) { fetch(:bundle_cmd) rescue 'bundle' }
           end
 
           # =========================================================================
@@ -231,11 +222,6 @@ module Capistrano
             DESC
             task :default do
               update
-              service.restart
-            end
-            
-            desc "tmp task for testing"
-            task :restart do
               service.restart
             end
 
@@ -387,7 +373,7 @@ module Capistrano
               DESC
               task :default do
                 revision
-                restart
+                service.restart
                 cleanup
               end
             end
@@ -462,7 +448,7 @@ module Capistrano
             task :cold do
               update
               migrate
-              start
+              service.start
             end
 
             namespace :pending do
