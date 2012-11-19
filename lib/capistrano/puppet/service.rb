@@ -10,9 +10,10 @@ module Capistrano
         'puppet:restart',
         'puppet:shutdown',
         'puppet:start',
+        'puppet:status',
         'puppet:stop',
       ]
-      
+
       def self.new(config={})
 
         # Determine the service type if not specified.
@@ -32,7 +33,7 @@ module Capistrano
       end
 
       # Checks known files to try to intelligently guess the service in
-      # use.  This needs a lot of work to be of any use, specifying 
+      # use.  This needs a lot of work to be of any use, specifying
       # :default_service manually in config/deploy.rb is probably the only sane
       # method for now.
       def self.default_service
@@ -42,7 +43,7 @@ module Capistrano
           :webrick
         end
       end
-      
+
       def self.load_into(capistrano_config)
         capistrano_config.load do
           before(Capistrano::Puppet::Service::TASKS) do
@@ -64,7 +65,6 @@ module Capistrano
             # =========================================================================
             _cset(:service)           { Capistrano::Puppet::Service.new(self) }
 
-            # puts variables.to_yaml
           end
 
           # =========================================================================
@@ -72,29 +72,29 @@ module Capistrano
           # =========================================================================
 
 
-          
+
           # =========================================================================
-          # These are the base tasks that are available for managing the Puppet 
+          # These are the base tasks that are available for managing the Puppet
           # service.  Additional tasks may be defined by services, though the
-          # services must be loaded explicitly in your Capfile to be available.  If 
+          # services must be loaded explicitly in your Capfile to be available.  If
           # the base tasks are adequate this is not required.
           # You can have cap give you a summary of them with `cap -T'.
           # =========================================================================
-          
           namespace :puppet do
-            desc 'Start Puppet master process'
-            task :start, :roles => :master, :except => {:no_release => true} do
-              service.start
+
+            desc 'Set Puppet Master daemon to start on boot'
+            task :enable, :roles => :master, :except => {:no_release => true} do
+              service.enable
             end
 
-            desc 'Stop Puppet'
-            task :stop, :roles => :master, :except => {:no_release => true} do
-              service.stop
+            desc 'Disables Puppet Master daemon from starting at boot'
+            task :enable, :roles => :master, :except => {:no_release => true} do
+              service.disable
             end
 
-            desc 'Immediately shutdown Puppet'
-            task :shutdown, :roles => :master, :except => {:no_release => true} do
-              service.shutdown
+            desc 'Reload Puppet'
+            task :reload, :roles => :master, :except => {:no_release => true} do
+              service.reload
             end
 
             desc 'Restart Puppet'
@@ -102,9 +102,24 @@ module Capistrano
               service.restart
             end
 
-            desc 'Reload Puppet'
-            task :reload, :roles => :master, :except => {:no_release => true} do
-              service.reload
+            desc 'Immediately shutdown Puppet'
+            task :shutdown, :roles => :master, :except => {:no_release => true} do
+              service.shutdown
+            end
+
+            desc 'Start Puppet master process'
+            task :start, :roles => :master, :except => {:no_release => true} do
+              service.start
+            end
+
+            desc 'Shows current status'
+            task :stop, :roles => :master, :except => {:no_release => true} do
+              service.status
+            end
+            
+            desc 'Stop Puppet'
+            task :stop, :roles => :master, :except => {:no_release => true} do
+              service.stop
             end
           end
         end

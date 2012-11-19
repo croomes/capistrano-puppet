@@ -50,6 +50,11 @@ module Capistrano
           run "#{try_sudo} /sbin/service puppet start"
         end
 
+        # Current status.
+        def status
+          run "#{try_sudo} /sbin/service puppet status"
+        end        
+
         # Stops the service.
         def stop
           run "#{try_sudo} /sbin/service puppet stop"
