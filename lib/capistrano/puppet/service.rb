@@ -113,10 +113,10 @@ module Capistrano
             end
 
             desc 'Shows current status'
-            task :stop, :roles => :master, :except => {:no_release => true} do
+            task :status, :roles => :master, :except => {:no_release => true} do
               service.status
             end
-            
+
             desc 'Stop Puppet'
             task :stop, :roles => :master, :except => {:no_release => true} do
               service.stop
