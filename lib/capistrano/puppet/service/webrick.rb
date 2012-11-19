@@ -19,6 +19,7 @@ module Capistrano
           'puppet:condrestart',
           'puppet:once',
         ]
+        SERVICE_INIT = "/etc/init.d/puppet"
 
         # Enables the service for starting on boot.
         def enable
@@ -67,6 +68,9 @@ module Capistrano
 
         def self.load_into(capistrano_config)
           capistrano_config.load do
+            
+            _cset(:puppet_init)    { Capistrano::Puppet::Service.default_service }
+            
             namespace :puppet do
 
               desc 'Restarts if already running'
@@ -81,6 +85,14 @@ module Capistrano
             end
           end
         end
+
+        # Performs a check on the remote hosts to determine whether everything
+        # is setup such that a deploy could succeed.
+        def check!
+          Capistrano::Deploy::Dependencies.new(configuration) do |d|
+            d.remote.file(Capistrano::Puppet::Service::Webrick::SERVICE_INIT).or("`#{Capistrano::Puppet::Service::Webrick::SERVICE_INIT}' does not exist. Please run `cap deploy:setup'.")
+          end
+        end        
       end
     end
   end
