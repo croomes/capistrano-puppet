@@ -11,7 +11,6 @@ module Capistrano
         'deploy:setup',
         'deploy:update',
         'deploy:update_code',
-        'deploy:finalize_update',
         'deploy:create_symlink',
         'deploy:rollback:default',
         'deploy:rollback:revision',
@@ -38,7 +37,7 @@ module Capistrano
             # These variables MUST be set in the client capfiles. If they are not set,
             # the deploy will fail with an error.
             # =========================================================================
-            _cset(:application) { abort "Please specify the name of your application, set :application, 'foo'" }
+            _cset(:application) { abort "Please specify the name of your application, set :application, 'Puppet Master'" }
             _cset(:repository)  { abort "Please specify the repository that houses your application's code, set :repository, 'foo'" }
 
             # =========================================================================
@@ -65,13 +64,9 @@ module Capistrano
             _cset(:release_name)      { set :deploy_timestamped, true; Time.now.utc.strftime("%Y%m%d%H%M%S") }
 
             _cset :version_dir,       "releases"
-            _cset :shared_dir,        "shared"
-            # _cset :shared_children,   %w(public/system log tmp/pids)
-            _cset :shared_children,   %w()
             _cset :current_dir,       "current"
 
             _cset(:releases_path)     { File.join(deploy_to, version_dir) }
-            _cset(:shared_path)       { File.join(deploy_to, shared_dir) }
             _cset(:current_path)      { File.join(deploy_to, current_dir) }
             _cset(:release_path)      { File.join(releases_path, release_name) }
 
@@ -197,18 +192,6 @@ module Capistrano
             try_sudo(*args)
           end
 
-
-          #
-          # deploy:setup
-          #
-          def setup
-            dirs = [deploy_to, releases_path, shared_path]
-            dirs += shared_children.map { |d| File.join(shared_path, d.split('/').last) }
-            run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
-            run "#{try_sudo} chmod g+w #{dirs.join(' ')}" if fetch(:group_writable, true)
-          end
-
-
           #
           # Puppet deploy tasks
           #
@@ -238,7 +221,9 @@ module Capistrano
               will not destroy any deployed revisions or data.
             DESC
             task :setup, :except => { :no_release => true } do
-              run setup
+              dirs = [deploy_to, releases_path]
+              run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
+              run "#{try_sudo} chmod g+w #{dirs.join(' ')}" if fetch(:group_writable, true)
             end
 
             desc <<-DESC
@@ -271,44 +256,6 @@ module Capistrano
             task :update_code, :except => { :no_release => true } do
               on_rollback { run "rm -rf #{release_path}; true" }
               strategy.deploy!
-              finalize_update
-            end
-
-            desc <<-DESC
-              [internal] Touches up the released code. This is called by update_code \
-              after the basic deploy finishes. It assumes a Rails project was deployed, \
-              so if you are deploying something else, you may want to override this \
-              task with your own environment's requirements.
-
-              This task will make the release group-writable (if the :group_writable \
-              variable is set to true, which is the default). It will then set up \
-              symlinks to the shared directory for the log, system, and tmp/pids \
-              directories, and will lastly touch all assets in public/images, \
-              public/stylesheets, and public/javascripts so that the times are \
-              consistent (so that asset timestamping works).  This touch process \
-              is only carried out if the :normalize_asset_timestamps variable is \
-              set to true, which is the default The asset directories can be overridden \
-              using the :public_children variable.
-            DESC
-            task :finalize_update, :except => { :no_release => true } do
-              escaped_release = latest_release.to_s.shellescape
-              commands = []
-              commands << "chmod -R -- g+w #{escaped_release}" if fetch(:group_writable, true)
-
-              # mkdir -p is making sure that the directories are there for some SCM's that don't
-              # save empty folders
-              shared_children.map do |dir|
-                d = dir.shellescape
-                if (dir.rindex('/')) then
-                  commands += ["rm -rf -- #{escaped_release}/#{d}",
-                              "mkdir -p -- #{escaped_release}/#{dir.slice(0..(dir.rindex('/'))).shellescape}"]
-                else
-                  commands << "rm -rf -- #{escaped_release}/#{d}"
-                end
-                commands << "ln -s -- #{shared_path}/#{dir.split('/').last.shellescape} #{escaped_release}/#{d}"
-              end
-
-              run commands.join(' && ') if commands.any?
             end
 
             desc <<-DESC
@@ -328,14 +275,14 @@ module Capistrano
                   logger.important "no previous release to rollback to, rollback of symlink skipped"
                 end
               end
-              # run "test -d #{current_path} && #{try_sudo} mv #{current_path} #{current_path}.deploysave"
+              # run "test -d #{current_path} && #{try_sudo} mv #{current_path} #{current_path}.deploysave.$$"
               run "#{try_sudo} rm -f #{current_path} && #{try_sudo} ln -s #{latest_release} #{current_path}"
             end
 
             namespace :rollback do
               desc <<-DESC
-                [internal] Points the current symlink at the previous revision.
-                This is called by the rollback sequence, and should rarely (if
+                [internal] Points the current symlink at the previous revision. \
+                This is called by the rollback sequence, and should rarely (if \
                 ever) need to be called directly.
               DESC
               task :revision, :except => { :no_release => true } do
@@ -347,8 +294,8 @@ module Capistrano
               end
 
               desc <<-DESC
-                [internal] Removes the most recently deployed release.
-                This is called by the rollback sequence, and should rarely
+                [internal] Removes the most recently deployed release. \
+                This is called by the rollback sequence, and should rarely \
                 (if ever) need to be called directly.
               DESC
               task :cleanup, :except => { :no_release => true } do
@@ -412,7 +359,8 @@ module Capistrano
                 depend :remote, :directory, "/u/depot/files"
             DESC
             task :check, :except => { :no_release => true } do
-              dependencies = strategy.check!
+              # dependencies = strategy.check!
+              dependencies = service.check!              
 
               other = fetch(:dependencies, {})
               other.each do |location, types|

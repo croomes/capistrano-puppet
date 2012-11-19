@@ -1,3 +1,5 @@
+require 'capistrano/recipes/deploy/dependencies'
+
 module Capistrano
   module Puppet
     module Service
@@ -25,6 +27,17 @@ module Capistrano
             raise NotImplementedError, "`#{name}' is not implemented by #{self.class.name}"
           }
         end
+        
+        # Performs a check on the remote hosts to determine whether everything
+        # is setup such that a deploy could succeed.
+        def check!
+          Capistrano::Deploy::Dependencies.new(configuration) do |d|
+            puts "XXX"
+            # d.remote.directory(configuration[:releases_path]).or("`#{configuration[:releases_path]}' does not exist. Please run `cap deploy:setup'.")
+            # d.remote.writable(configuration[:deploy_to]).or("You do not have permissions to write to `#{configuration[:deploy_to]}'.")
+            # d.remote.writable(configuration[:releases_path]).or("You do not have permissions to write to `#{configuration[:releases_path]}'.")
+          end
+        end        
 
         protected
 
