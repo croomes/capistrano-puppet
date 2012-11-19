@@ -47,6 +47,11 @@ module Capistrano
         def start
           raise NotImplementedError, "`start' is not implemented by #{self.class.name}"
         end
+
+        # Current status.
+        def status
+          raise NotImplementedError, "`status' is not implemented by #{self.class.name}"
+        end        
         
         # Stops the service.
         def stop
