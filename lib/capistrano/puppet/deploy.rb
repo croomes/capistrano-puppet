@@ -58,7 +58,11 @@ module Capistrano
             _cset(:source)            { Capistrano::Deploy::SCM.new(scm, self) }
             _cset(:real_revision)     { source.local.query_revision(revision) { |cmd| with_env("LC_ALL", "C") { run_locally(cmd) } } }
             _cset(:strategy)          { Capistrano::Deploy::Strategy.new(deploy_via, self) }
+
             _cset(:service)           { Capistrano::Puppet::Service.new(self)}            
+            _cset(:puppet_user)       { "puppet" }
+            _cset(:puppet_group)      { "puppet" }
+
 
             # If overriding release name, please also select an appropriate setting for :releases below.
             _cset(:release_name)      { set :deploy_timestamped, true; Time.now.utc.strftime("%Y%m%d%H%M%S") }
@@ -223,6 +227,7 @@ module Capistrano
             task :setup, :except => { :no_release => true } do
               dirs = [deploy_to, releases_path]
               run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
+              run "#{try_sudo} chown #{user} #{dirs.join(' ')}" if fetch(:user, false)
               run "#{try_sudo} chmod g+w #{dirs.join(' ')}" if fetch(:group_writable, true)
             end
 
@@ -237,6 +242,8 @@ module Capistrano
             task :update do
               transaction do
                 update_code
+                prep_environment
+                update_modules
                 create_symlink
               end
             end
@@ -256,6 +263,24 @@ module Capistrano
             task :update_code, :except => { :no_release => true } do
               on_rollback { run "rm -rf #{release_path}; true" }
               strategy.deploy!
+              service.deploy!
+            end
+
+            desc <<-DESC
+              Updates the Puppet modules.
+            DESC
+            task :update_modules, :except => { :no_release => true } do
+              release_path ||= current_path
+              run "cd #{release_path} && librarian-puppet install --path #{release_path}/environments/production/modules"
+            end
+
+            desc <<-DESC
+              Prepares the environment for installing modules and manifests into.
+            DESC
+            task :prep_environment,  :except => { :no_release => true } do
+              run "test -d #{release_path}/environments/production/modules || mkdir -p #{release_path}/environments/production/modules"
+              run "test -d #{release_path}/environments/production/manifests || mkdir -p #{release_path}/environments/production/manifests"
+              run "test -d #{release_path}/files || mkdir -p #{release_path}/files"
             end
 
             desc <<-DESC
@@ -271,12 +296,14 @@ module Capistrano
               on_rollback do
                 if previous_release
                   run "#{try_sudo} rm -f #{current_path}; #{try_sudo} ln -s #{previous_release} #{current_path}; true"
+                  service.rollback_symlink
                 else
                   logger.important "no previous release to rollback to, rollback of symlink skipped"
                 end
               end
               # run "test -d #{current_path} && #{try_sudo} mv #{current_path} #{current_path}.deploysave.$$"
               run "#{try_sudo} rm -f #{current_path} && #{try_sudo} ln -s #{latest_release} #{current_path}"
+              service.symlink
             end
 
             namespace :rollback do

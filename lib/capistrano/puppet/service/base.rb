@@ -27,6 +27,19 @@ module Capistrano
             raise NotImplementedError, "`#{name}' is not implemented by #{self.class.name}"
           }
         end
+
+        # Stubs for implmenting in services (optional)
+        def symlink(source = nil, dest = nil)
+        end
+
+        def rollback_symlink(source = nil, dest = nil)
+        end
+
+        def set_user(user = nil, group = nil)
+        end
+
+        def deploy!
+        end
         
         # Performs a check on the remote hosts to determine whether everything
         # is setup such that a deploy could succeed.
