@@ -267,11 +267,11 @@ module Capistrano
             end
 
             desc <<-DESC
-              Updates the Puppet modules.
+              Updates the Puppet modules. Requires 'librarian-puppet' gem.
             DESC
             task :update_modules, :except => { :no_release => true } do
-              release_path ||= current_path
-              run "cd #{release_path} && librarian-puppet install --path #{release_path}/environments/production/modules"
+              path = fetch(:release_path) rescue current_path
+              run "cd #{path} && test -f Puppetfile && librarian-puppet install --path #{path}/environments/production/modules"
             end
 
             desc <<-DESC
