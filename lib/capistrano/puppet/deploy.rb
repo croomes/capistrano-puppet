@@ -267,7 +267,15 @@ module Capistrano
             end
 
             desc <<-DESC
-              Updates the Puppet modules. Requires 'librarian-puppet' gem.
+              Updates the Puppet modules.  If modules are maintained by `librarian-puppet' \
+              via a `Puppetfile' manifest, run the update.
+              
+              This is usually called as part of a deploy, but can also be called \
+              independently.  As part of a deploy, modules in the new release are \
+              updated, though the release will be made live later in the deploy process. \
+              When run independently, modules in the currently-live release are updated. \
+
+              Requires the `librarian-puppet' gem and a valid `Puppetfile'.
             DESC
             task :update_modules, :except => { :no_release => true } do
               path = fetch(:release_path) rescue current_path
@@ -275,7 +283,9 @@ module Capistrano
             end
 
             desc <<-DESC
-              Prepares the environment for installing modules and manifests into.
+              Prepares the environment.  This runs any post-checkout tasks, like creating \
+              directories or setting permissions, that can only be done after the new \
+              release has been checked out from SCM.
             DESC
             task :prep_environment,  :except => { :no_release => true } do
               run "test -d #{release_path}/environments/production/modules || mkdir -p #{release_path}/environments/production/modules"
@@ -386,7 +396,7 @@ module Capistrano
                 depend :remote, :directory, "/u/depot/files"
             DESC
             task :check, :except => { :no_release => true } do
-              # dependencies = strategy.check!
+              dependencies = strategy.check!
               dependencies = service.check!              
 
               other = fetch(:dependencies, {})
@@ -422,7 +432,6 @@ module Capistrano
             DESC
             task :cold do
               update
-              migrate
               service.start
             end
 

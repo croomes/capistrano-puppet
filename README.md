@@ -18,7 +18,7 @@ with Vagrant sandbox at https://github.com/croomes/puppet-multimaster.
 
 The following code will:
 
-- Checkout Puppet config from SCM into /vagrant/puppet-conf
+- Checkout Puppet config from git into /vagrant/puppet-conf
 - Symlink to /etc/puppet
 - Restart Puppet daemon if running
 
@@ -34,7 +34,6 @@ Example Capfile:
     require 'capistrano'
     require 'rubygems'
     require 'capistrano/puppet'
-    require 'capistrano/puppet/service/webrick'
 
     load 'config/deploy'
 
@@ -51,6 +50,8 @@ Example config/deploy.rb:
     set :scm, :git
     set :repository,  "git://github.com/croomes/puppet-conf.git"
 
+    require 'capistrano/puppet/service/#{puppet_service}'
+    
     role :master, "localhost"
 
 Initial run:
@@ -63,27 +64,31 @@ Initial run:
 
 ```bash
 $ cap -T
-cap deploy                # Deploys your Puppet configuration.
-cap deploy:check          # Test deployment dependencies.
-cap deploy:cleanup        # Clean up old releases.
-cap deploy:cold           # Deploys and starts a `cold' application.
-cap deploy:create_symlink # Updates the symlink to the most recently deployed...
-cap deploy:pending        # Displays the commits since your last deploy.
-cap deploy:pending:diff   # Displays the `diff' since your last deploy.
-cap deploy:rollback       # Rolls back to a previous version and restarts.
-cap deploy:rollback:code  # Rolls back to the previously deployed version.
-cap deploy:setup          # Prepares one or more servers for deployment.
-cap deploy:update         # Copies your project and updates the symlink.
-cap deploy:update_code    # Copies your project to the remote servers.
-cap invoke                # Invoke a single command on the remote servers.
-cap puppet:condrestart    # Restarts if already running
-cap puppet:once           # Exits after running the configuration once
-cap puppet:reload         # Reload Puppet
-cap puppet:restart        # Restart Puppet
-cap puppet:shutdown       # Immediately shutdown Puppet
-cap puppet:start          # Start Puppet master process
-cap puppet:stop           # Stop Puppet
-cap shell                 # Begin an interactive Capistrano session.
+cap deploy                  # Deploys your Puppet configuration.
+cap deploy:check            # Test deployment dependencies.
+cap deploy:cleanup          # Clean up old releases.
+cap deploy:cold             # Deploys and starts a `cold' application.
+cap deploy:create_symlink   # Updates the symlink to the most recently deploy...
+cap deploy:pending          # Displays the commits since your last deploy.
+cap deploy:pending:diff     # Displays the `diff' since your last deploy.
+cap deploy:prep_environment # Prepares the environment for installing modules...
+cap deploy:rollback         # Rolls back to a previous version and restarts.
+cap deploy:rollback:code    # Rolls back to the previously deployed version.
+cap deploy:setup            # Prepares one or more servers for deployment.
+cap deploy:update           # Copies your project and updates the symlink.
+cap deploy:update_code      # Copies your project to the remote servers.
+cap deploy:update_modules   # Updates the Puppet modules.
+cap invoke                  # Invoke a single command on the remote servers.
+cap puppet:condrestart      # Restarts if already running
+cap puppet:enable           # Disables Puppet Master daemon from starting at ...
+cap puppet:once             # Exits after running the configuration once
+cap puppet:reload           # Reload Puppet
+cap puppet:restart          # Restart Puppet
+cap puppet:shutdown         # Immediately shutdown Puppet
+cap puppet:start            # Start Puppet master process
+cap puppet:status           # Shows current status
+cap puppet:stop             # Stop Puppet
+cap shell                   # Begin an interactive Capistrano session.
 ```
 
 ## See also
