@@ -29,7 +29,7 @@ module Capistrano
         end
 
         # Stubs for implmenting in services (optional)
-        def symlink(source = nil, dest = nil)
+        def create_symlink(source = nil, dest = nil)
         end
 
         def rollback_symlink(source = nil, dest = nil)
@@ -41,6 +41,9 @@ module Capistrano
         def deploy!
         end
         
+        def update_code!
+        end
+
         # Performs a check on the remote hosts to determine whether everything
         # is setup such that a deploy could succeed.
         def check!

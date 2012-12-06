@@ -11,6 +11,7 @@ module Capistrano
         'deploy:setup',
         'deploy:update',
         'deploy:update_code',
+        'deploy:finalize_update',
         'deploy:create_symlink',
         'deploy:rollback:default',
         'deploy:rollback:revision',
@@ -69,8 +70,10 @@ module Capistrano
 
             _cset :version_dir,       "releases"
             _cset :current_dir,       "current"
+            _cset :shared_dir,        "shared"
 
             _cset(:releases_path)     { File.join(deploy_to, version_dir) }
+            _cset(:shared_path)       { File.join(deploy_to, shared_dir) }
             _cset(:current_path)      { File.join(deploy_to, current_dir) }
             _cset(:release_path)      { File.join(releases_path, release_name) }
 
@@ -243,7 +246,6 @@ module Capistrano
               transaction do
                 update_code
                 prep_environment
-                update_modules
                 create_symlink
               end
             end
@@ -263,7 +265,17 @@ module Capistrano
             task :update_code, :except => { :no_release => true } do
               on_rollback { run "rm -rf #{release_path}; true" }
               strategy.deploy!
-              service.deploy!
+              service.update_code!
+              finalize_update
+            end
+
+            desc <<-DESC
+              [internal] Touches up the released code. This is called by update_code \
+              after the basic deploy finishes. Nothing is run by default, it is \
+              intended that you override this task to suit your own environment's \
+              requirements.
+            DESC
+            task :finalize_update, :except => { :no_release => true } do
             end
 
             desc <<-DESC
@@ -290,7 +302,6 @@ module Capistrano
             task :prep_environment,  :except => { :no_release => true } do
               run "test -d #{release_path}/environments/production/modules || mkdir -p #{release_path}/environments/production/modules"
               run "test -d #{release_path}/environments/production/manifests || mkdir -p #{release_path}/environments/production/manifests"
-              run "test -d #{release_path}/files || mkdir -p #{release_path}/files"
             end
 
             desc <<-DESC
@@ -306,14 +317,12 @@ module Capistrano
               on_rollback do
                 if previous_release
                   run "#{try_sudo} rm -f #{current_path}; #{try_sudo} ln -s #{previous_release} #{current_path}; true"
-                  service.rollback_symlink
                 else
                   logger.important "no previous release to rollback to, rollback of symlink skipped"
                 end
               end
               # run "test -d #{current_path} && #{try_sudo} mv #{current_path} #{current_path}.deploysave.$$"
               run "#{try_sudo} rm -f #{current_path} && #{try_sudo} ln -s #{latest_release} #{current_path}"
-              service.symlink
             end
 
             namespace :rollback do

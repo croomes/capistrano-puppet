@@ -62,8 +62,8 @@ module Capistrano
         end
 
         # Symlink tasks
-        def symlink(source = "#{release_path}/rack/apache2.conf", dest = "/etc/httpd/conf.d/puppet.conf")
-          run "(test -s #{dest} &&  [ `readlink #{dest}` == #{source} ]) || #{try_sudo} rm #{dest}"
+        def create_symlink(source = "#{release_path}/rack/apache2.conf", dest = "/etc/httpd/conf.d/puppet.conf")
+          run "(test -s #{dest} &&  [ `readlink #{dest}` == #{source} ]) || (test -s #{dest} && #{try_sudo} rm #{dest} || true)"
           run "test -s #{dest} || #{try_sudo} ln -s #{source} #{dest}"
         end
 
@@ -77,13 +77,21 @@ module Capistrano
         end
 
         # Deployment tasks
-        def deploy!
+        def update_code!
+        end
+
+        def finalize_update
+          build_passenger
           set_user(puppet_user, puppet_group)
         end
 
         def set_user(user, group)
           run "#{try_sudo} sudo chown #{user}:#{group} #{release_path}/rack/config.ru"
         end
+
+        def build_passenger
+          run "test -f ${GEM_HOME}/gems/passenger-*/ext/apache2/mod_passenger.so || (cd #{release_path} && passenger-install-apache2-module -a)"
+        end  
 
         def self.load_into(capistrano_config)
           capistrano_config.load do
@@ -92,8 +100,8 @@ module Capistrano
               # Vars used by service must be copied here
               _cset(:service)             { Capistrano::Puppet::Service.new(self)}
               _cset(:release_name)        { set :deploy_timestamped, true; Time.now.utc.strftime("%Y%m%d%H%M%S") }
-              _cset :version_dir,         "releases"
-              _cset :current_dir,         "current"
+              _cset(:version_dir)         { "releases" }
+              _cset(:current_dir)         { "current" }
               _cset(:releases_path)       { File.join(deploy_to, version_dir) }
               _cset(:current_path)        { File.join(deploy_to, current_dir) }
               _cset(:release_path)        { File.join(releases_path, release_name) }
@@ -110,15 +118,15 @@ module Capistrano
 
               desc 'Builds Passenger Apache extensions'
               task :build_passenger, :roles => :master, :except => {:no_release => true} do
-                 run "test -f ${GEM_HOME}/gems/passenger-*/ext/apache2/mod_passenger.so || (cd #{release_path} && passenger-install-apache2-module -a)"
+                 service.build_passenger
               end
 
-              desc 'Symlinks Apache config'
+              desc '[internal] Symlinks Apache config'
               task :symlink_apache, :roles => :master, :except => {:no_release => true} do
-                service.symlink(apache_conf_source, apache_conf)
+                service.create_symlink(apache_conf_source, apache_conf)
               end
 
-              desc 'Sets the user to run Puppet as'
+              desc '[internal] Sets the user to run Puppet as'
               task :set_user, :roles => :master, :except => {:no_release => true} do
                 service.set_user(puppet_user, puppet_group)
               end
