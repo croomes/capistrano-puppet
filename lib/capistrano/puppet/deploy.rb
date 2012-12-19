@@ -66,7 +66,7 @@ module Capistrano
 
 
             # If overriding release name, please also select an appropriate setting for :releases below.
-            _cset(:release_name)      { set :deploy_timestamped, true; Time.now.utc.strftime("%Y%m%d%H%M%S") }
+            _cset(:release_name)      { set :deploy_timestamped, true; "r#{Time.now.utc.strftime("%Y%m%d%H%M%S")}" }
 
             _cset :version_dir,       "releases"
             _cset :current_dir,       "current"
@@ -291,7 +291,7 @@ module Capistrano
             DESC
             task :update_modules, :except => { :no_release => true } do
               path = fetch(:release_path) rescue current_path
-              run "cd #{path} && test -f Puppetfile && librarian-puppet install --path #{path}/environments/production/modules"
+              run "cd #{path} && test -f Puppetfile && librarian-puppet install --path #{path}/modules"
             end
 
             desc <<-DESC
@@ -300,8 +300,6 @@ module Capistrano
               release has been checked out from SCM.
             DESC
             task :prep_environment,  :except => { :no_release => true } do
-              run "test -d #{release_path}/environments/production/modules || mkdir -p #{release_path}/environments/production/modules"
-              run "test -d #{release_path}/environments/production/manifests || mkdir -p #{release_path}/environments/production/manifests"
             end
 
             desc <<-DESC
