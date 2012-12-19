@@ -63,14 +63,14 @@ module Capistrano
 
         # Symlink tasks
         def create_symlink(source = "#{release_path}/rack/apache2.conf", dest = "/etc/httpd/conf.d/puppet.conf")
-          run "(test -s #{dest} &&  [ `readlink #{dest}` == #{source} ]) || (test -s #{dest} && #{try_sudo} rm #{dest} || true)"
-          run "test -s #{dest} || #{try_sudo} ln -s #{source} #{dest}"
+          run "(test -L #{dest} &&  [ `readlink #{dest}` == #{source} ]) || (test -L #{dest} && #{try_sudo} rm #{dest} || true)"
+          run "test -L #{dest} || #{try_sudo} ln -s #{source} #{dest}"
         end
 
         def rollback_symlink(source = "#{previous_release}/rack/apache2.conf", dest = "/etc/httpd/conf.d/puppet.conf")
           if previous_release
-            run "(test -s #{dest} &&  [ `readlink #{dest}` == #{source} ]) || #{try_sudo} rm #{dest}"
-            run "test -s #{dest} || #{try_sudo} ln -s #{source} #{dest}"
+            run "(test -L #{dest} &&  [ `readlink #{dest}` == #{source} ]) || #{try_sudo} rm #{dest}"
+            run "test -L #{dest} || #{try_sudo} ln -s #{source} #{dest}"
           else
             logger.important "no previous release to rollback to, rollback of symlink skipped"
           end
