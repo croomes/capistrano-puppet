@@ -73,7 +73,7 @@ module Capistrano
             _cset :shared_dir,        "shared"
 
             _cset(:releases_path)     { File.join(deploy_to, version_dir) }
-            _cset(:shared_path)       { File.join(deploy_to, shared_dir) }
+            _cset(:shared_path)       { }
             _cset(:current_path)      { File.join(deploy_to, current_dir) }
             _cset(:release_path)      { File.join(releases_path, release_name) }
 
@@ -228,10 +228,19 @@ module Capistrano
               will not destroy any deployed revisions or data.
             DESC
             task :setup, :except => { :no_release => true } do
-              dirs = [deploy_to, releases_path]
-              run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
-              run "#{try_sudo} chown #{user} #{dirs.join(' ')}" if fetch(:user, false)
-              run "#{try_sudo} chmod g+w #{dirs.join(' ')}" if fetch(:group_writable, true)
+              deploy_dirs = [deploy_to, releases_path]
+              shared_dirs = [shared_path]
+
+              run "#{try_sudo} mkdir -p #{[deploy_dirs, shared_dirs].join(' ')}"
+
+              run "#{try_sudo} chown #{user} #{deploy_dirs.join(' ')}" if fetch(:user, false)
+              run "#{try_sudo} chmod g+w #{deploy_dirs.join(' ')}" if fetch(:group_writable, false)
+
+              if shared_dirs.any?
+                run "#{try_sudo} chown #{puppet_user} #{shared_dirs.join(' ')}" if fetch(:puppet_user, false)
+                run "#{try_sudo} chgrp #{puppet_group} #{shared_dirs.join(' ')}" if fetch(:puppet_group, false)
+                run "#{try_sudo} chmod g+w #{shared_dirs.join(' ')}"
+              end
             end
 
             desc <<-DESC
@@ -245,7 +254,7 @@ module Capistrano
             task :update do
               transaction do
                 update_code
-                prep_environment
+                #prep_environment
                 create_symlink
               end
             end
@@ -271,11 +280,23 @@ module Capistrano
 
             desc <<-DESC
               [internal] Touches up the released code. This is called by update_code \
-              after the basic deploy finishes. Nothing is run by default, it is \
-              intended that you override this task to suit your own environment's \
-              requirements.
+              after the basic deploy finishes.
+
+              This task will make the release group-writable if the :group_writable \
+              variable is set to true, or remove group (and other) write access if the \
+              :group_writable variable is set to false (the default). \
+
+              If you use the multistage extension, you may wish to set :group_writable \
+              to true for development stage and default to false in staging and \
+              production to encourage following release procedures.
             DESC
             task :finalize_update, :except => { :no_release => true } do
+              escaped_release = latest_release.to_s.shellescape
+              if fetch(:group_writable, false) == true
+                run "chmod -R -- g+w #{escaped_release}"
+              else
+                run "chmod -R -- go-w #{escaped_release}"
+              end
             end
 
             desc <<-DESC
@@ -295,14 +316,6 @@ module Capistrano
             end
 
             desc <<-DESC
-              Prepares the environment.  This runs any post-checkout tasks, like creating \
-              directories or setting permissions, that can only be done after the new \
-              release has been checked out from SCM.
-            DESC
-            task :prep_environment,  :except => { :no_release => true } do
-            end
-
-            desc <<-DESC
               Updates the symlink to the most recently deployed version. Capistrano works \
               by putting each new release of your application in its own directory. When \
               you deploy a new version, this task's job is to update the `current' symlink \
@@ -319,7 +332,6 @@ module Capistrano
                   logger.important "no previous release to rollback to, rollback of symlink skipped"
                 end
               end
-              # run "test -d #{current_path} && #{try_sudo} mv #{current_path} #{current_path}.deploysave.$$"
               run "#{try_sudo} rm -f #{current_path} && #{try_sudo} ln -s #{latest_release} #{current_path}"
             end
 
@@ -403,6 +415,14 @@ module Capistrano
                 depend :remote, :directory, "/u/depot/files"
             DESC
             task :check, :except => { :no_release => true } do
+
+              # Unset the default shell to allow checks to work when using rvm.  The 
+              # rvm-capistrano module will set rvm-shell as the default shell, but rvm
+              # may not have been installed yet.
+              shell = fetch(:default_shell, false)
+              if shell and shell.include? 'rvm-shell'
+                self[:default_shell] = nil
+              end
               dependencies = strategy.check!
               dependencies = service.check!              
 
