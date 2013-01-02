@@ -90,7 +90,7 @@ module Capistrano
         end
 
         def build_passenger
-          run "test -f ${GEM_HOME}/gems/passenger-*/ext/apache2/mod_passenger.so || (cd #{release_path} && passenger-install-apache2-module -a)"
+          run "test -f ${GEM_HOME}/gems/passenger-*/ext/apache2/mod_passenger.so || (cd #{release_path} && passenger-install-apache2-module -a 2>/dev/null)"
         end  
 
         def self.load_into(capistrano_config)
