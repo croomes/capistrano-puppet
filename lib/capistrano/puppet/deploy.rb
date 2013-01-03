@@ -69,11 +69,11 @@ module Capistrano
             _cset(:release_name)      { set :deploy_timestamped, true; "r#{Time.now.utc.strftime("%Y%m%d%H%M%S")}" }
 
             _cset :version_dir,       "releases"
-            _cset :current_dir,       "current"
             _cset :shared_dir,        "shared"
+            _cset :current_dir,       "current"
 
             _cset(:releases_path)     { File.join(deploy_to, version_dir) }
-            _cset(:shared_path)       { }
+            _cset(:shared_path)       { File.join(deploy_to, shared_dir) }
             _cset(:current_path)      { File.join(deploy_to, current_dir) }
             _cset(:release_path)      { File.join(releases_path, release_name) }
 
